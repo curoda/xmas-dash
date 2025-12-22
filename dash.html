@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="screen-orientation" content="landscape">
+  <title>Christmas Coin Chase!</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body, #root {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      background: #1a1a3e;
+    }
+    @keyframes pulse {
+      from { transform: translate(-50%, -50%) scale(1); }
+      to { transform: translate(-50%, -50%) scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const ChristmasGame = () => {
+      const [gameState, setGameState] = useState('start');
+      const [playerName, setPlayerName] = useState('');
+      const [money, setMoney] = useState(0);
+      const [playerY, setPlayerY] = useState(50);
+      const [items, setItems] = useState([]);
+      const [backgroundOffset, setBackgroundOffset] = useState(0);
+      const [grinchX, setGrinchX] = useState(100);
+      const [snowflakes, setSnowflakes] = useState([]);
+      const [touchDirection, setTouchDirection] = useState(null);
+      const gameLoopRef = useRef(null);
+      const keysPressed = useRef({});
+      const containerRef = useRef(null);
+
+      const PLAYER_X = 10;
+
+      useEffect(() => {
+        const flakes = Array.from({ length: 40 }, (_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 0.5 + 0.3,
+          speed: Math.random() * 0.3 + 0.15
+        }));
+        setSnowflakes(flakes);
+      }, []);
+
+      const spawnItem = useCallback(() => {
+        const isCoin = Math.random() > 0.4;
+        return {
+          id: Date.now() + Math.random(),
+          x: 102,
+          y: Math.random() * 70 + 10,
+          type: isCoin ? 'coin' : 'obstacle',
+          value: isCoin ? Math.floor(Math.random() * 10) + 5 : Math.floor(Math.random() * 8) + 3
+        };
+      }, []);
+
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          keysPressed.current[e.key] = true;
+          if (['ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
+            e.preventDefault();
+          }
+        };
+        const handleKeyUp = (e) => {
+          keysPressed.current[e.key] = false;
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+        };
+      }, []);
+
+      useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const preventDefaults = (e) => {
+          if (gameState === 'playing' || gameState === 'grinch') {
+            e.preventDefault();
+          }
+        };
+
+        container.addEventListener('touchmove', preventDefaults, { passive: false });
+        container.addEventListener('touchstart', preventDefaults, { passive: false });
+
+        return () => {
+          container.removeEventListener('touchmove', preventDefaults);
+          container.removeEventListener('touchstart', preventDefaults);
+        };
+      }, [gameState]);
+
+      useEffect(() => {
+        if (gameState !== 'playing' && gameState !== 'grinch') return;
+
+        const gameLoop = setInterval(() => {
+          const moveSpeed = 1.2;
+          
+          if (keysPressed.current['ArrowUp'] || keysPressed.current['w'] || touchDirection === 'up') {
+            setPlayerY(y => Math.max(5, y - moveSpeed));
+          }
+          if (keysPressed.current['ArrowDown'] || keysPressed.current['s'] || touchDirection === 'down') {
+            setPlayerY(y => Math.min(75, y + moveSpeed));
+          }
+
+          setBackgroundOffset(offset => (offset + 0.25) % 100);
+
+          setSnowflakes(flakes => flakes.map(f => ({
+            ...f,
+            x: f.x - f.speed * 0.3,
+            y: f.y + f.speed,
+            ...(f.y > 100 ? { y: -2, x: Math.random() * 100 } : {}),
+            ...(f.x < -2 ? { x: 102 } : {})
+          })));
+
+          if (Math.random() < 0.025 && gameState === 'playing') {
+            setItems(items => [...items, spawnItem()]);
+          }
+
+          setItems(items => {
+            const playerBox = { x: PLAYER_X, y: playerY, width: 10, height: 12 };
+            
+            return items
+              .map(item => ({ ...item, x: item.x - 0.6 }))
+              .filter(item => {
+                const itemBox = { 
+                  x: item.x, 
+                  y: item.y, 
+                  width: item.type === 'coin' ? 6 : 7, 
+                  height: item.type === 'coin' ? 6 : 8 
+                };
+
+                const collision = 
+                  playerBox.x < itemBox.x + itemBox.width &&
+                  playerBox.x + playerBox.width > itemBox.x &&
+                  playerBox.y < itemBox.y + itemBox.height &&
+                  playerBox.y + playerBox.height > itemBox.y;
+
+                if (collision) {
+                  if (item.type === 'coin') {
+                    setMoney(m => Math.min(100, m + item.value));
+                  } else {
+                    setMoney(m => Math.max(0, m - item.value));
+                  }
+                  return false;
+                }
+
+                return item.x > -10;
+              });
+          });
+
+          setMoney(m => {
+            if (m >= 100 && gameState === 'playing') {
+              setGameState('grinch');
+            }
+            return m;
+          });
+
+        }, 1000 / 60);
+
+        gameLoopRef.current = gameLoop;
+        return () => clearInterval(gameLoop);
+      }, [gameState, playerY, touchDirection, spawnItem]);
+
+      useEffect(() => {
+        if (gameState !== 'grinch') return;
+
+        const grinchLoop = setInterval(() => {
+          setGrinchX(x => {
+            if (x <= 35) {
+              clearInterval(grinchLoop);
+              setTimeout(() => setGameState('won'), 2000);
+              return 35;
+            }
+            return x - 1;
+          });
+        }, 1000 / 60);
+
+        return () => clearInterval(grinchLoop);
+      }, [gameState]);
+
+      const startGame = () => {
+        if (playerName.trim()) {
+          setGameState('playing');
+          setMoney(0);
+          setItems([]);
+          setPlayerY(50);
+          setGrinchX(100);
+        }
+      };
+
+      const resetGame = () => {
+        setGameState('start');
+        setPlayerName('');
+        setMoney(0);
+        setItems([]);
+        setPlayerY(50);
+        setGrinchX(100);
+      };
+
+      const handleTouchStart = (direction) => {
+        setTouchDirection(direction);
+      };
+
+      const handleTouchEnd = () => {
+        setTouchDirection(null);
+      };
+
+      const renderMountains = (offset, color, speed, height) => {
+        const adjustedOffset = (offset * speed) % 25;
+        return (
+          <g>
+            {[-1, 0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <polygon
+                key={i}
+                points={`${i * 25 - adjustedOffset},100 ${i * 25 + 12.5 - adjustedOffset},${100 - height} ${i * 25 + 25 - adjustedOffset},100`}
+                fill={color}
+              />
+            ))}
+          </g>
+        );
+      };
+
+      const renderTrees = (offset) => {
+        const adjustedOffset = (offset * 1.5) % 18;
+        return (
+          <g>
+            {[-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => (
+              <g key={i} transform={`translate(${i * 18 - adjustedOffset}, 0)`}>
+                <polygon points="6,76 9,64 12,76" fill="#0d5c0d" />
+                <polygon points="6,68 9,56 12,68" fill="#0f6b0f" />
+                <polygon points="6,60 9,48 12,60" fill="#117a11" />
+                <rect x="8" y="76" width="2" height="4" fill="#4a3728" />
+              </g>
+            ))}
+          </g>
+        );
+      };
+
+      const containerStyle = {
+        width: '100vw',
+        height: '100vh',
+        maxWidth: '100%',
+        maxHeight: '100%',
+        margin: '0 auto',
+        position: 'relative',
+        overflow: 'hidden',
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none'
+      };
+
+      if (gameState === 'start') {
+        return (
+          <div ref={containerRef} style={{
+            ...containerStyle,
+            background: 'linear-gradient(to bottom, #1a1a3e 0%, #2d1b4e 50%, #1a472a 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Georgia, serif'
+          }}>
+            <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 100 100" preserveAspectRatio="none">
+              {snowflakes.map(f => (
+                <circle key={f.id} cx={f.x} cy={f.y} r={f.size} fill="white" opacity="0.8" />
+              ))}
+            </svg>
+            
+            <h1 style={{ 
+              color: '#ff6b6b', 
+              fontSize: 'clamp(24px, 6vw, 48px)', 
+              textShadow: '3px 3px 0 #2d5a27, -1px -1px 0 #fff',
+              marginBottom: '2vh',
+              zIndex: 1,
+              textAlign: 'center',
+              padding: '0 10px'
+            }}>
+              Christmas Coin Chase!
+            </h1>
+            
+            <p style={{ 
+              color: '#90EE90', 
+              fontSize: 'clamp(14px, 3vw, 18px)', 
+              marginBottom: '3vh', 
+              zIndex: 1 
+            }}>
+              Collect coins to earn $100!
+            </p>
+            
+            <div style={{ 
+              background: 'rgba(255,255,255,0.95)', 
+              padding: 'clamp(15px, 3vw, 30px)', 
+              borderRadius: '15px',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+              zIndex: 1,
+              width: '80%',
+              maxWidth: '350px'
+            }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '10px', 
+                color: '#2d5a27', 
+                fontWeight: 'bold',
+                fontSize: 'clamp(14px, 2.5vw, 16px)'
+              }}>
+                Enter Your Name:
+              </label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && startGame()}
+                style={{
+                  padding: 'clamp(10px, 2vw, 15px)',
+                  fontSize: 'clamp(16px, 3vw, 20px)',
+                  borderRadius: '8px',
+                  border: '3px solid #c41e3a',
+                  marginBottom: '15px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  outline: 'none'
+                }}
+                placeholder="Your name here..."
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="words"
+              />
+              <button
+                onClick={startGame}
+                style={{
+                  padding: 'clamp(12px, 2.5vw, 18px) clamp(30px, 5vw, 50px)',
+                  fontSize: 'clamp(18px, 3vw, 24px)',
+                  background: 'linear-gradient(to bottom, #c41e3a, #8b0000)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  boxShadow: '0 4px 0 #5c0000',
+                  width: '100%'
+                }}
+              >
+                Start Game!
+              </button>
+            </div>
+            
+            <p style={{ 
+              color: '#fff', 
+              marginTop: '3vh', 
+              fontSize: 'clamp(12px, 2vw, 14px)', 
+              zIndex: 1,
+              textAlign: 'center'
+            }}>
+              Tap left side to go UP, right side to go DOWN
+            </p>
+          </div>
+        );
+      }
+
+      if (gameState === 'won') {
+        return (
+          <div ref={containerRef} style={{
+            ...containerStyle,
+            background: 'linear-gradient(to bottom, #1a472a, #2d5a27)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Georgia, serif'
+          }}>
+            <h1 style={{ 
+              color: '#ffd700', 
+              fontSize: 'clamp(24px, 5vw, 42px)', 
+              textShadow: '2px 2px 4px #000',
+              marginBottom: '2vh',
+              textAlign: 'center',
+              padding: '0 10px'
+            }}>
+              Congratulations, {playerName}!
+            </h1>
+            
+            <div style={{ fontSize: 'clamp(40px, 10vw, 80px)', marginBottom: '2vh' }}>🎄🎁🎅</div>
+            
+            <p style={{ 
+              color: '#fff', 
+              fontSize: 'clamp(18px, 4vw, 28px)', 
+              marginBottom: '1vh' 
+            }}>
+              You earned <span style={{ color: '#90EE90', fontWeight: 'bold' }}>${money}</span>!
+            </p>
+            
+            <p style={{ 
+              color: '#ff6b6b', 
+              fontSize: 'clamp(12px, 2.5vw, 18px)', 
+              marginBottom: '3vh',
+              textAlign: 'center',
+              padding: '0 20px'
+            }}>
+              The Grinch stopped you from earning more... but $100 is the max anyway!
+            </p>
+            
+            <button
+              onClick={resetGame}
+              style={{
+                padding: 'clamp(12px, 2.5vw, 18px) clamp(30px, 5vw, 50px)',
+                fontSize: 'clamp(18px, 3vw, 24px)',
+                background: 'linear-gradient(to bottom, #c41e3a, #8b0000)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                boxShadow: '0 4px 0 #5c0000'
+              }}
+            >
+              Play Again!
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div ref={containerRef} style={containerStyle}>
+          <svg 
+            width="100%" 
+            height="100%" 
+            viewBox="0 0 100 100" 
+            preserveAspectRatio="xMidYMid slice"
+            style={{ display: 'block', position: 'absolute', top: 0, left: 0 }}
+          >
+            <defs>
+              <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#0a1628" />
+                <stop offset="50%" stopColor="#1a3a5c" />
+                <stop offset="100%" stopColor="#2d5a7b" />
+              </linearGradient>
+            </defs>
+            <rect width="100" height="100" fill="url(#skyGradient)" />
+
+            {[...Array(20)].map((_, i) => (
+              <circle
+                key={`star-${i}`}
+                cx={(i * 9.1 + backgroundOffset * 0.1) % 100}
+                cy={(i * 4.6) % 25}
+                r={0.3}
+                fill="white"
+                opacity={0.7}
+              />
+            ))}
+
+            <circle cx={88} cy={12} r={4} fill="#fffacd" />
+            <circle cx={89} cy={11} r={3.5} fill="#0a1628" />
+
+            {renderMountains(backgroundOffset, '#1a3a4a', 0.3, 20)}
+            {renderMountains(backgroundOffset, '#2d4a5a', 0.6, 16)}
+            {renderMountains(backgroundOffset, '#3d5a6a', 1, 12)}
+            {renderTrees(backgroundOffset)}
+
+            <rect x="0" y="80" width="100" height="20" fill="#f0f8ff" />
+            <rect x="0" y="80" width="100" height="2" fill="#e8f4f8" />
+
+            {snowflakes.map(f => (
+              <circle key={f.id} cx={f.x} cy={f.y} r={f.size} fill="white" opacity="0.8" />
+            ))}
+
+            <g transform={`translate(${PLAYER_X}, ${playerY})`}>
+              <ellipse cx="4" cy="7" rx="5" ry="1.8" fill="#8b0000" />
+              <ellipse cx="4" cy="7" rx="4" ry="1.2" fill="#c41e3a" />
+              <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
+              <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
+              <circle cx="3.5" cy="4" r="1.8" fill="#ffdbac" />
+              <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
+              <path d="M 2 2.5 Q 3.5 0 5.5 3" fill="#c41e3a" />
+              <circle cx="5.5" cy="2.5" r="0.7" fill="white" />
+              <ellipse cx="3.5" cy="3" rx="2" ry="0.6" fill="white" />
+            </g>
+
+            {items.map(item => (
+              <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
+                {item.type === 'coin' ? (
+                  <g>
+                    <circle cx="2.5" cy="3" r="2.5" fill="#ffd700" stroke="#daa520" strokeWidth="0.3" />
+                    <circle cx="2.5" cy="3" r="1.8" fill="none" stroke="#fff" strokeWidth="0.15" opacity="0.5" />
+                    <rect x="2" y="0" width="1" height="1.2" fill="#888" />
+                    <circle cx="2.5" cy="0.6" r="0.6" fill="#888" stroke="#666" strokeWidth="0.15" />
+                    <text x="2.5" y="3.8" textAnchor="middle" fill="#8b4513" fontSize="2" fontWeight="bold">$</text>
+                  </g>
+                ) : (
+                  <g>
+                    <circle cx="3" cy="5" r="2.5" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
+                    <circle cx="3" cy="1.8" r="1.8" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
+                    <circle cx="2.4" cy="1.5" r="0.3" fill="#000" />
+                    <circle cx="3.6" cy="1.5" r="0.3" fill="#000" />
+                    <polygon points="3,2 3,2.6 4,2.3" fill="#ff6600" />
+                    <circle cx="3" cy="4.3" r="0.3" fill="#333" />
+                    <circle cx="3" cy="5.4" r="0.3" fill="#333" />
+                    <line x1="0.5" y1="4" x2="2.3" y2="3.6" stroke="#8b4513" strokeWidth="0.5" />
+                    <line x1="5.5" y1="4" x2="3.7" y2="3.6" stroke="#8b4513" strokeWidth="0.5" />
+                  </g>
+                )}
+              </g>
+            ))}
+
+            {gameState === 'grinch' && (
+              <g transform={`translate(${grinchX}, 25)`}>
+                <ellipse cx="8" cy="45" rx="7" ry="10" fill="#4a7c23" />
+                <ellipse cx="8" cy="20" rx="6" ry="7" fill="#4a7c23" />
+                <ellipse cx="6" cy="18" rx="1.2" ry="1.5" fill="#fff" />
+                <ellipse cx="10" cy="18" rx="1.2" ry="1.5" fill="#fff" />
+                <circle cx="6.3" cy="18.3" r="0.6" fill="#8b0000" />
+                <circle cx="10.3" cy="18.3" r="0.6" fill="#8b0000" />
+                <path d="M 4 26 Q 8 30 12 26" stroke="#1a4010" strokeWidth="0.6" fill="none" />
+                <path d="M 3 14 Q 8 6 14 12" fill="#c41e3a" />
+                <ellipse cx="8" cy="13" rx="6" ry="1.8" fill="white" />
+                <circle cx="14" cy="11" r="1.5" fill="white" />
+                <path d="M 1 38 Q -2 28 -1 22" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
+                <path d="M 15 38 Q 18 28 17 22" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
+              </g>
+            )}
+          </svg>
+
+          {(gameState === 'playing' || gameState === 'grinch') && (
+            <>
+              <div
+                onTouchStart={() => handleTouchStart('up')}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={() => handleTouchStart('up')}
+                onMouseUp={handleTouchEnd}
+                onMouseLeave={handleTouchEnd}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '50%',
+                  height: '100%',
+                  background: touchDirection === 'up' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <div style={{
+                  color: 'rgba(255,255,255,0.3)',
+                  fontSize: 'clamp(24px, 8vw, 48px)',
+                  pointerEvents: 'none'
+                }}>
+                  ▲
+                </div>
+              </div>
+              
+              <div
+                onTouchStart={() => handleTouchStart('down')}
+                onTouchEnd={handleTouchEnd}
+                onMouseDown={() => handleTouchStart('down')}
+                onMouseUp={handleTouchEnd}
+                onMouseLeave={handleTouchEnd}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  width: '50%',
+                  height: '100%',
+                  background: touchDirection === 'down' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <div style={{
+                  color: 'rgba(255,255,255,0.3)',
+                  fontSize: 'clamp(24px, 8vw, 48px)',
+                  pointerEvents: 'none'
+                }}>
+                  ▼
+                </div>
+              </div>
+            </>
+          )}
+
+          <div style={{
+            position: 'absolute',
+            top: '2%',
+            left: '2%',
+            background: 'rgba(0,0,0,0.7)',
+            padding: 'clamp(5px, 1.5vw, 12px) clamp(10px, 2vw, 20px)',
+            borderRadius: '10px',
+            color: 'white',
+            fontFamily: 'Georgia, serif',
+            zIndex: 20
+          }}>
+            <div style={{ fontSize: 'clamp(12px, 2.5vw, 18px)', fontWeight: 'bold' }}>{playerName}</div>
+            <div style={{ fontSize: 'clamp(20px, 4vw, 32px)', color: '#90EE90' }}>${money}</div>
+          </div>
+
+          <div style={{
+            position: 'absolute',
+            top: '2%',
+            right: '2%',
+            width: 'clamp(100px, 25vw, 200px)',
+            background: 'rgba(0,0,0,0.7)',
+            padding: 'clamp(5px, 1vw, 10px)',
+            borderRadius: '10px',
+            zIndex: 20
+          }}>
+            <div style={{ 
+              color: 'white', 
+              fontSize: 'clamp(8px, 1.5vw, 12px)', 
+              marginBottom: '4px', 
+              fontFamily: 'Georgia, serif' 
+            }}>
+              Progress to $100
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: 'clamp(12px, 2.5vw, 20px)', 
+              background: '#333', 
+              borderRadius: '10px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${money}%`,
+                height: '100%',
+                background: money >= 100 ? '#ff6b6b' : 'linear-gradient(to right, #4ade80, #22c55e)',
+                transition: 'width 0.3s',
+                borderRadius: '10px'
+              }} />
+            </div>
+          </div>
+
+          {gameState === 'grinch' && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(139, 0, 0, 0.95)',
+              padding: 'clamp(10px, 3vw, 25px) clamp(20px, 5vw, 45px)',
+              borderRadius: '15px',
+              color: 'white',
+              fontSize: 'clamp(16px, 4vw, 28px)',
+              fontWeight: 'bold',
+              fontFamily: 'Georgia, serif',
+              textAlign: 'center',
+              zIndex: 30,
+              animation: 'pulse 0.5s infinite alternate'
+            }}>
+              THE GRINCH IS COMING!
+              <div style={{ fontSize: 'clamp(10px, 2vw, 16px)', marginTop: '8px' }}>
+                He will not let you earn more than $100!
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ChristmasGame />);
+  </script>
+</body>
+</html>
