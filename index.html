@@ -35,6 +35,25 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
 
+    // Image mapping for player heads at each $10 interval
+    const HEAD_IMAGES = {
+      0: '1 - elf-game.jpg',      // $0-9
+      1: '2 - henry-game.jpg',    // $10-19
+      2: '3 - Kooper-game.jpg',   // $20-29
+      3: '4 - maggie-game.jpg',   // $30-39
+      4: '5 - fin-game.jpg',      // $40-49
+      5: '6 - grace-game.jpg',    // $50-59
+      6: '7 - ben-game.jpg',      // $60-69
+      7: '8 - bobby-game.jpg',    // $70-79
+      8: '9 - olivia-game.jpg',   // $80-89
+      9: '10 - chase-game.jpg'    // $90-100
+    };
+
+    const getHeadImage = (money) => {
+      const index = Math.min(Math.floor(money / 10), 9);
+      return HEAD_IMAGES[index];
+    };
+
     const ChristmasGame = () => {
       const [gameState, setGameState] = useState('start');
       const [playerName, setPlayerName] = useState('');
@@ -69,7 +88,7 @@
           x: 102,
           y: Math.random() * 70 + 10,
           type: isCoin ? 'coin' : 'obstacle',
-          value: isCoin ? Math.floor(Math.random() * 10) + 5 : Math.floor(Math.random() * 8) + 3
+          value: isCoin ? 1 : Math.floor(Math.random() * 8) + 3  // Coins are now $1, obstacles still random
         };
       }, []);
 
@@ -459,6 +478,9 @@
                 <stop offset="50%" stopColor="#1a3a5c" />
                 <stop offset="100%" stopColor="#2d5a7b" />
               </linearGradient>
+              <clipPath id="headClip">
+                <circle cx="3.5" cy="4" r="2.2" />
+              </clipPath>
             </defs>
             <rect width="100" height="100" fill="url(#skyGradient)" />
 
@@ -488,16 +510,35 @@
               <circle key={f.id} cx={f.x} cy={f.y} r={f.size} fill="white" opacity="0.8" />
             ))}
 
+            {/* Player Sleigh */}
             <g transform={`translate(${PLAYER_X}, ${playerY})`}>
+              {/* Sleigh body */}
               <ellipse cx="4" cy="7" rx="5" ry="1.8" fill="#8b0000" />
               <ellipse cx="4" cy="7" rx="4" ry="1.2" fill="#c41e3a" />
               <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
               <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
-              <circle cx="3.5" cy="4" r="1.8" fill="#ffdbac" />
+              
+              {/* Character body */}
               <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
-              <path d="M 2 2.5 Q 3.5 0 5.5 3" fill="#c41e3a" />
-              <circle cx="5.5" cy="2.5" r="0.7" fill="white" />
-              <ellipse cx="3.5" cy="3" rx="2" ry="0.6" fill="white" />
+              
+              {/* Character head - now an image */}
+              <clipPath id="playerHeadClip">
+                <circle cx="3.5" cy="3.5" r="2.5" />
+              </clipPath>
+              <image 
+                href={getHeadImage(money)}
+                x="0.5" 
+                y="0.5" 
+                width="6" 
+                height="6" 
+                clipPath="url(#playerHeadClip)"
+                preserveAspectRatio="xMidYMid slice"
+              />
+              
+              {/* Santa hat on top of head */}
+              <path d="M 1.5 2 Q 3.5 -1 6 2" fill="#c41e3a" />
+              <circle cx="6" cy="1.5" r="0.8" fill="white" />
+              <ellipse cx="3.5" cy="2.2" rx="2.2" ry="0.5" fill="white" />
             </g>
 
             {items.map(item => (
