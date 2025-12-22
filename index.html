@@ -25,6 +25,14 @@
       from { transform: translate(-50%, -50%) scale(1); }
       to { transform: translate(-50%, -50%) scale(1.05); }
     }
+    @keyframes levelUp {
+      0% { transform: translateX(-50%) scale(1); background: rgba(0,0,0,0.7); }
+      15% { transform: translateX(-50%) scale(1.5); background: rgba(255, 215, 0, 0.95); }
+      30% { transform: translateX(-50%) scale(1.3); }
+      50% { transform: translateX(-50%) scale(1.4); }
+      70% { transform: translateX(-50%) scale(1.3); }
+      100% { transform: translateX(-50%) scale(1.3); background: rgba(255, 215, 0, 0.9); }
+    }
   </style>
 </head>
 <body>
@@ -83,6 +91,8 @@
       const [grinchX, setGrinchX] = useState(100);
       const [snowflakes, setSnowflakes] = useState([]);
       const [touchDirection, setTouchDirection] = useState(null);
+      const [levelUpAnimation, setLevelUpAnimation] = useState(false);
+      const [currentLevel, setCurrentLevel] = useState(1);
       const gameLoopRef = useRef(null);
       const keysPressed = useRef({});
       const containerRef = useRef(null);
@@ -239,6 +249,16 @@
         return () => clearInterval(grinchLoop);
       }, [gameState]);
 
+      // Detect level changes and trigger animation
+      useEffect(() => {
+        const newLevel = Math.min(Math.floor(money / 10) + 1, 10);
+        if (newLevel !== currentLevel && money > 0) {
+          setCurrentLevel(newLevel);
+          setLevelUpAnimation(true);
+          setTimeout(() => setLevelUpAnimation(false), 1500);
+        }
+      }, [money, currentLevel]);
+
       const startGame = () => {
         if (playerName.trim()) {
           setGameState('playing');
@@ -246,6 +266,8 @@
           setItems([]);
           setPlayerY(50);
           setGrinchX(100);
+          setCurrentLevel(1);
+          setLevelUpAnimation(false);
         }
       };
 
@@ -256,6 +278,8 @@
         setItems([]);
         setPlayerY(50);
         setGrinchX(100);
+        setCurrentLevel(1);
+        setLevelUpAnimation(false);
       };
 
       const handleTouchStart = (direction) => {
@@ -537,19 +561,6 @@
               <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
               <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
               
-              {/* Level name on sleigh */}
-              <text 
-                x="4" 
-                y="7.5" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="1.4" 
-                fontWeight="bold"
-                fontFamily="Georgia, serif"
-              >
-                {getLevelInfo(money).name}
-              </text>
-              
               {/* Character body */}
               <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
               
@@ -571,6 +582,21 @@
               <path d="M 1.5 2 Q 3.5 -1 6 2" fill="#c41e3a" />
               <circle cx="6" cy="1.5" r="0.8" fill="white" />
               <ellipse cx="3.5" cy="2.2" rx="2.2" ry="0.5" fill="white" />
+              
+              {/* Level name on sleigh - rendered last to be on top */}
+              <text 
+                x="4" 
+                y="9.2" 
+                textAnchor="middle" 
+                fill="white" 
+                fontSize="1.6" 
+                fontWeight="bold"
+                fontFamily="Arial, sans-serif"
+                stroke="#000"
+                strokeWidth="0.2"
+              >
+                {getLevelInfo(money).name}
+              </text>
             </g>
 
             {items.map(item => (
@@ -698,16 +724,18 @@
             top: '2%',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.7)',
+            background: levelUpAnimation ? 'rgba(255, 215, 0, 0.9)' : 'rgba(0,0,0,0.7)',
             padding: 'clamp(5px, 1.5vw, 12px) clamp(15px, 2.5vw, 25px)',
             borderRadius: '10px',
-            color: 'white',
+            color: levelUpAnimation ? '#000' : 'white',
             fontFamily: 'Georgia, serif',
-            zIndex: 20,
-            textAlign: 'center'
+            zIndex: 25,
+            textAlign: 'center',
+            animation: levelUpAnimation ? 'levelUp 0.5s ease-out forwards' : 'none',
+            boxShadow: levelUpAnimation ? '0 0 40px 15px rgba(255, 215, 0, 0.8)' : 'none'
           }}>
-            <div style={{ fontSize: 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
-              Level {getLevelInfo(money).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money).name}</span>
+            <div style={{ fontSize: levelUpAnimation ? 'clamp(18px, 4vw, 28px)' : 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
+              {levelUpAnimation ? 'LEVEL UP!' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
             </div>
           </div>
 
