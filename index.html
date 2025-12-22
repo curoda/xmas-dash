@@ -49,9 +49,28 @@
       9: '10 - chase-game.png'    // $90-100
     };
 
+    // Level names corresponding to each $10 interval
+    const LEVEL_NAMES = {
+      0: 'Elf',
+      1: 'Henry',
+      2: 'Maggie',
+      3: 'Kooper',
+      4: 'Fin',
+      5: 'Grace',
+      6: 'Ben',
+      7: 'Bobby',
+      8: 'Olivia',
+      9: 'Chase'
+    };
+
     const getHeadImage = (money) => {
       const index = Math.min(Math.floor(money / 10), 9);
       return HEAD_IMAGES[index];
+    };
+
+    const getLevelInfo = (money) => {
+      const index = Math.min(Math.floor(money / 10), 9);
+      return { level: index + 1, name: LEVEL_NAMES[index] };
     };
 
     const ChristmasGame = () => {
@@ -518,6 +537,19 @@
               <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
               <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
               
+              {/* Level name on sleigh */}
+              <text 
+                x="4" 
+                y="7.5" 
+                textAnchor="middle" 
+                fill="white" 
+                fontSize="1.4" 
+                fontWeight="bold"
+                fontFamily="Georgia, serif"
+              >
+                {getLevelInfo(money).name}
+              </text>
+              
               {/* Character body */}
               <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
               
@@ -658,6 +690,25 @@
           }}>
             <div style={{ fontSize: 'clamp(12px, 2.5vw, 18px)', fontWeight: 'bold' }}>{playerName}</div>
             <div style={{ fontSize: 'clamp(20px, 4vw, 32px)', color: '#90EE90' }}>${money}</div>
+          </div>
+
+          {/* Level indicator - upper middle */}
+          <div style={{
+            position: 'absolute',
+            top: '2%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.7)',
+            padding: 'clamp(5px, 1.5vw, 12px) clamp(15px, 2.5vw, 25px)',
+            borderRadius: '10px',
+            color: 'white',
+            fontFamily: 'Georgia, serif',
+            zIndex: 20,
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
+              Level {getLevelInfo(money).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money).name}</span>
+            </div>
           </div>
 
           <div style={{
