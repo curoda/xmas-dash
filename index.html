@@ -121,6 +121,10 @@
       const [levelUpAnimation, setLevelUpAnimation] = useState(false);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
+      const [presentsDodged, setPresentsDodged] = useState(0);
+      const [bossPresents, setBossPresents] = useState([]);
+      const [presentSpeed, setPresentSpeed] = useState(1);
+      const [bossDefeated, setBossDefeated] = useState(false);
       const gameLoopRef = useRef(null);
       const keysPressed = useRef({});
       const containerRef = useRef(null);
@@ -270,7 +274,7 @@
         if (!container) return;
 
         const preventDefaults = (e) => {
-          if (gameState === 'playing' || gameState === 'grinch') {
+          if (gameState === 'playing') {
             e.preventDefault();
           }
         };
@@ -347,7 +351,12 @@
           setMoney(m => {
             const maxEarnings = getMaxEarnings(playerName);
             if (m >= maxEarnings && maxEarnings !== Infinity && gameState === 'playing') {
-              setGameState('grinch');
+              setGameState('boss');
+              setPresentsDodged(0);
+              setPresentSpeed(1);
+              setBossPresents([]);
+              setBossDefeated(false);
+              setItems([]); // Clear regular items
             }
             return m;
           });
@@ -358,22 +367,96 @@
         return () => clearInterval(gameLoop);
       }, [gameState, playerY, touchDirection, spawnItem]);
 
+      // Boss battle game loop
       useEffect(() => {
-        if (gameState !== 'grinch') return;
+        if (gameState !== 'boss') return;
 
-        const grinchLoop = setInterval(() => {
-          setGrinchX(x => {
-            if (x <= 35) {
-              clearInterval(grinchLoop);
-              setTimeout(() => setGameState('won'), 2000);
-              return 35;
+        const bossLoop = setInterval(() => {
+          // Player movement during boss battle
+          const moveSpeed = 1.5;
+          if (keysPressed.current['ArrowUp'] || keysPressed.current['w'] || touchDirection === 'up') {
+            setPlayerY(y => Math.max(5, y - moveSpeed));
+          }
+          if (keysPressed.current['ArrowDown'] || keysPressed.current['s'] || touchDirection === 'down') {
+            setPlayerY(y => Math.min(75, y + moveSpeed));
+          }
+
+          // Spawn new presents
+          if (Math.random() < 0.03 + (presentSpeed * 0.01)) {
+            setBossPresents(prev => [...prev, {
+              id: Date.now() + Math.random(),
+              x: 95,
+              y: Math.random() * 70 + 10,
+              rotation: Math.random() * 360
+            }]);
+          }
+
+          // Move presents and check collisions
+          setBossPresents(prev => {
+            const playerBox = { x: PLAYER_X, y: playerY, width: 10, height: 12 };
+            let hitPlayer = false;
+            let dodgedThisFrame = 0;
+
+            const remaining = prev
+              .map(p => ({ 
+                ...p, 
+                x: p.x - (0.8 + presentSpeed * 0.3),
+                rotation: p.rotation + 5
+              }))
+              .filter(p => {
+                // Check collision with player
+                const presentBox = { x: p.x, y: p.y, width: 5, height: 5 };
+                const collision = 
+                  playerBox.x < presentBox.x + presentBox.width &&
+                  playerBox.x + playerBox.width > presentBox.x &&
+                  playerBox.y < presentBox.y + presentBox.height &&
+                  playerBox.y + playerBox.height > presentBox.y;
+
+                if (collision) {
+                  hitPlayer = true;
+                  return false;
+                }
+
+                // Check if dodged (went off screen)
+                if (p.x < -5) {
+                  dodgedThisFrame++;
+                  return false;
+                }
+
+                return true;
+              });
+
+            if (hitPlayer) {
+              // Player got hit - end boss battle, they still win but with message
+              setTimeout(() => {
+                setBossDefeated(false);
+                setGameState('won');
+              }, 500);
             }
-            return x - 1;
+
+            if (dodgedThisFrame > 0) {
+              setPresentsDodged(d => {
+                const newCount = d + dodgedThisFrame;
+                if (newCount >= 20) {
+                  // Player won!
+                  setTimeout(() => {
+                    setBossDefeated(true);
+                    setGameState('won');
+                  }, 500);
+                }
+                return newCount;
+              });
+              // Increase speed slightly with each dodge
+              setPresentSpeed(s => Math.min(s + 0.15, 4));
+            }
+
+            return remaining;
           });
+
         }, 1000 / 60);
 
-        return () => clearInterval(grinchLoop);
-      }, [gameState]);
+        return () => clearInterval(bossLoop);
+      }, [gameState, playerY, touchDirection, presentSpeed]);
 
       // Detect level changes and trigger animation only for level UP (not for special characters)
       useEffect(() => {
@@ -694,10 +777,12 @@
               textAlign: 'center',
               padding: '0 10px'
             }}>
-              Congratulations, {playerName}!
+              {bossDefeated ? `${playerName} Defeated the Grinch!` : `Congratulations, ${playerName}!`}
             </h1>
             
-            <div style={{ fontSize: 'clamp(40px, 10vw, 80px)', marginBottom: '2vh' }}>🎄🎁🎅</div>
+            <div style={{ fontSize: 'clamp(40px, 10vw, 80px)', marginBottom: '2vh' }}>
+              {bossDefeated ? '🏆🎄🎅' : '🎄🎁🎅'}
+            </div>
             
             <p style={{ 
               color: '#fff', 
@@ -708,13 +793,16 @@
             </p>
             
             <p style={{ 
-              color: '#ff6b6b', 
+              color: bossDefeated ? '#90EE90' : '#ff6b6b', 
               fontSize: 'clamp(12px, 2.5vw, 18px)', 
               marginBottom: '3vh',
               textAlign: 'center',
               padding: '0 20px'
             }}>
-              The Grinch stopped you from earning more... but ${getMaxEarnings(playerName)} is the max anyway!
+              {bossDefeated 
+                ? 'You dodged all 20 presents and defeated the Grinch! You are a Christmas Champion!'
+                : `The Grinch got you with a present... but you still earned $${money}!`
+              }
             </p>
             
             <button
@@ -889,14 +977,29 @@
             {items.map(item => (
               <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
                 {item.type === 'coin' ? (
-                  <g>
-                    {/* Silver for $1/$3, Gold for $2/$5 */}
-                    <circle cx="2.5" cy="3" r="2.5" fill={item.value === 1 || item.value === 3 ? '#c0c0c0' : '#ffd700'} stroke={item.value === 1 || item.value === 3 ? '#a0a0a0' : '#daa520'} strokeWidth="0.3" />
-                    <circle cx="2.5" cy="3" r="1.8" fill="none" stroke="#fff" strokeWidth="0.15" opacity="0.5" />
-                    <rect x="2" y="0" width="1" height="1.2" fill="#888" />
-                    <circle cx="2.5" cy="0.6" r="0.6" fill="#888" stroke="#666" strokeWidth="0.15" />
-                    <text x="2.5" y="3.7" textAnchor="middle" fill={item.value === 1 || item.value === 3 ? '#444' : '#8b4513'} fontSize="2.2" fontWeight="bold">${item.value}</text>
-                  </g>
+                  playerName === 'Lebron' ? (
+                    <g>
+                      {/* Basketball for Lebron */}
+                      <circle cx="2.5" cy="3" r="2.5" fill="#e87a22" />
+                      {/* Basketball seam lines */}
+                      <line x1="2.5" y1="0.5" x2="2.5" y2="5.5" stroke="#333" strokeWidth="0.15" />
+                      <line x1="0" y1="3" x2="5" y2="3" stroke="#333" strokeWidth="0.15" />
+                      {/* Curved seams */}
+                      <path d="M 1.2 0.8 Q 0.3 3 1.2 5.2" stroke="#333" strokeWidth="0.15" fill="none" />
+                      <path d="M 3.8 0.8 Q 4.7 3 3.8 5.2" stroke="#333" strokeWidth="0.15" fill="none" />
+                      {/* Value text */}
+                      <text x="2.5" y="3.5" textAnchor="middle" fill="#fff" fontSize="1.8" fontWeight="bold" stroke="#333" strokeWidth="0.2">${item.value}</text>
+                    </g>
+                  ) : (
+                    <g>
+                      {/* Silver for $1/$3, Gold for $2/$5 */}
+                      <circle cx="2.5" cy="3" r="2.5" fill={item.value === 1 || item.value === 3 ? '#c0c0c0' : '#ffd700'} stroke={item.value === 1 || item.value === 3 ? '#a0a0a0' : '#daa520'} strokeWidth="0.3" />
+                      <circle cx="2.5" cy="3" r="1.8" fill="none" stroke="#fff" strokeWidth="0.15" opacity="0.5" />
+                      <rect x="2" y="0" width="1" height="1.2" fill="#888" />
+                      <circle cx="2.5" cy="0.6" r="0.6" fill="#888" stroke="#666" strokeWidth="0.15" />
+                      <text x="2.5" y="3.7" textAnchor="middle" fill={item.value === 1 || item.value === 3 ? '#444' : '#8b4513'} fontSize="2.2" fontWeight="bold">${item.value}</text>
+                    </g>
+                  )
                 ) : item.type === 'snowman' ? (
                   <g>
                     {/* Snowman - anchored to ground */}
@@ -939,25 +1042,44 @@
               </g>
             ))}
 
-            {gameState === 'grinch' && (
-              <g transform={`translate(${grinchX}, 25)`}>
-                <ellipse cx="8" cy="45" rx="7" ry="10" fill="#4a7c23" />
-                <ellipse cx="8" cy="20" rx="6" ry="7" fill="#4a7c23" />
-                <ellipse cx="6" cy="18" rx="1.2" ry="1.5" fill="#fff" />
-                <ellipse cx="10" cy="18" rx="1.2" ry="1.5" fill="#fff" />
-                <circle cx="6.3" cy="18.3" r="0.6" fill="#8b0000" />
-                <circle cx="10.3" cy="18.3" r="0.6" fill="#8b0000" />
-                <path d="M 4 26 Q 8 30 12 26" stroke="#1a4010" strokeWidth="0.6" fill="none" />
-                <path d="M 3 14 Q 8 6 14 12" fill="#c41e3a" />
-                <ellipse cx="8" cy="13" rx="6" ry="1.8" fill="white" />
-                <circle cx="14" cy="11" r="1.5" fill="white" />
-                <path d="M 1 38 Q -2 28 -1 22" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
-                <path d="M 15 38 Q 18 28 17 22" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
-              </g>
+            {gameState === 'boss' && (
+              <>
+                {/* Grinch on the right side */}
+                <g transform="translate(85, 25)">
+                  <ellipse cx="8" cy="45" rx="7" ry="10" fill="#4a7c23" />
+                  <ellipse cx="8" cy="20" rx="6" ry="7" fill="#4a7c23" />
+                  <ellipse cx="6" cy="18" rx="1.2" ry="1.5" fill="#fff" />
+                  <ellipse cx="10" cy="18" rx="1.2" ry="1.5" fill="#fff" />
+                  <circle cx="6.3" cy="18.3" r="0.6" fill="#8b0000" />
+                  <circle cx="10.3" cy="18.3" r="0.6" fill="#8b0000" />
+                  <path d="M 4 26 Q 8 30 12 26" stroke="#1a4010" strokeWidth="0.6" fill="none" />
+                  <path d="M 3 14 Q 8 6 14 12" fill="#c41e3a" />
+                  <ellipse cx="8" cy="13" rx="6" ry="1.8" fill="white" />
+                  <circle cx="14" cy="11" r="1.5" fill="white" />
+                  {/* Arms in throwing position */}
+                  <path d="M 1 35 Q -5 25 -3 20" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
+                  <path d="M 15 35 Q 20 28 18 22" stroke="#4a7c23" strokeWidth="3" fill="none" strokeLinecap="round" />
+                </g>
+                
+                {/* Flying presents */}
+                {bossPresents.map(present => (
+                  <g key={present.id} transform={`translate(${present.x}, ${present.y}) rotate(${present.rotation}, 2.5, 2.5)`}>
+                    {/* Present box */}
+                    <rect x="0" y="0" width="5" height="5" fill="#e74c3c" stroke="#c0392b" strokeWidth="0.2" />
+                    {/* Ribbon */}
+                    <rect x="2.2" y="0" width="0.6" height="5" fill="#f1c40f" />
+                    <rect x="0" y="2.2" width="5" height="0.6" fill="#f1c40f" />
+                    {/* Bow */}
+                    <circle cx="2.5" cy="2.5" r="0.8" fill="#f1c40f" />
+                    <ellipse cx="1.5" cy="1.8" rx="0.8" ry="0.5" fill="#f1c40f" transform="rotate(-30, 1.5, 1.8)" />
+                    <ellipse cx="3.5" cy="1.8" rx="0.8" ry="0.5" fill="#f1c40f" transform="rotate(30, 3.5, 1.8)" />
+                  </g>
+                ))}
+              </>
             )}
           </svg>
 
-          {(gameState === 'playing' || gameState === 'grinch') && (
+          {(gameState === 'playing' || gameState === 'boss') && (
             <>
               <div
                 onTouchStart={() => handleTouchStart('up')}
@@ -1059,28 +1181,47 @@
             </div>
           </div>
 
-          {gameState === 'grinch' && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'rgba(139, 0, 0, 0.95)',
-              padding: 'clamp(10px, 3vw, 25px) clamp(20px, 5vw, 45px)',
-              borderRadius: '15px',
-              color: 'white',
-              fontSize: 'clamp(16px, 4vw, 28px)',
-              fontWeight: 'bold',
-              fontFamily: 'Georgia, serif',
-              textAlign: 'center',
-              zIndex: 30,
-              animation: 'pulse 0.5s infinite alternate'
-            }}>
-              THE GRINCH IS COMING!
-              <div style={{ fontSize: 'clamp(10px, 2vw, 16px)', marginTop: '8px' }}>
-                He will not let you earn more than $100!
+          {gameState === 'boss' && (
+            <>
+              {/* Boss battle title */}
+              <div style={{
+                position: 'absolute',
+                top: '2%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(139, 0, 0, 0.95)',
+                padding: 'clamp(8px, 2vw, 15px) clamp(15px, 4vw, 35px)',
+                borderRadius: '15px',
+                color: 'white',
+                fontSize: 'clamp(14px, 3.5vw, 24px)',
+                fontWeight: 'bold',
+                fontFamily: 'Georgia, serif',
+                textAlign: 'center',
+                zIndex: 30,
+                boxShadow: '0 0 20px rgba(139, 0, 0, 0.8)'
+              }}>
+                FINAL BOSS: THE GRINCH!
               </div>
-            </div>
+              
+              {/* Presents dodged counter */}
+              <div style={{
+                position: 'absolute',
+                bottom: '5%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0, 0, 0, 0.8)',
+                padding: 'clamp(8px, 2vw, 15px) clamp(20px, 4vw, 40px)',
+                borderRadius: '10px',
+                color: 'white',
+                fontSize: 'clamp(16px, 3vw, 24px)',
+                fontWeight: 'bold',
+                fontFamily: 'Georgia, serif',
+                textAlign: 'center',
+                zIndex: 30
+              }}>
+                Presents Dodged: <span style={{ color: '#90EE90' }}>{presentsDodged}</span> / 20
+              </div>
+            </>
           )}
         </div>
       );
