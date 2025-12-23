@@ -78,7 +78,13 @@
       9: 'Chase'
     };
 
-    const getHeadImage = (money) => {
+    const getHeadImage = (money, name) => {
+      // Special characters have fixed head images
+      if (name === 'Lebron') return 'lebron.png';
+      if (name === 'T-Swift') return 't-swift.png';
+      if (name === 'Khaleesi') return 'khaleesi.png';
+      
+      // Regular characters change based on level
       const index = Math.min(Math.floor(money / 10), 9);
       return HEAD_IMAGES[index];
     };
@@ -86,6 +92,20 @@
     const getLevelInfo = (money) => {
       const index = Math.min(Math.floor(money / 10), 9);
       return { level: index + 1, name: LEVEL_NAMES[index] };
+    };
+
+    // Get max earnings based on player name
+    const getMaxEarnings = (name) => {
+      const limitedPlayers = ['Henry', 'Maggie', 'Kooper', 'Finley', 'Grace', 'Ben', 'Bobby'];
+      const mediumPlayers = ['Chase', 'Olivia'];
+      
+      if (limitedPlayers.includes(name)) {
+        return 100;
+      } else if (mediumPlayers.includes(name)) {
+        return 250;
+      }
+      // Lebron, T-Swift, Khaleesi, and any future names have no limit
+      return Infinity;
     };
 
     const ChristmasGame = () => {
@@ -166,6 +186,14 @@
         const level = Math.min(Math.floor(money / 10) + 1, 10);
         const rand = Math.random();
         
+        // Determine coin value based on player
+        const getCoinValue = () => {
+          if (playerName === 'Chase' || playerName === 'Olivia') {
+            return Math.random() > 0.5 ? 5 : 3;
+          }
+          return Math.random() > 0.5 ? 2 : 1;
+        };
+        
         // Increase reindeer frequency at higher levels
         let reindeerThreshold, snowmanThreshold;
         if (level >= 9) {
@@ -188,12 +216,13 @@
         
         if (rand > snowmanThreshold) {
           // Coin - can appear anywhere
+          const coinValue = getCoinValue();
           return {
             id: Date.now() + Math.random(),
             x: 102,
             y: Math.random() * 70 + 10,
             type: 'coin',
-            value: 1
+            value: coinValue
           };
         } else if (rand > reindeerThreshold) {
           // Snowman - anchored to ground (lower portion of screen)
@@ -214,7 +243,7 @@
             value: Math.floor(Math.random() * 8) + 3
           };
         }
-      }, [money]);
+      }, [money, playerName]);
 
       useEffect(() => {
         const handleKeyDown = (e) => {
@@ -303,7 +332,8 @@
 
                 if (collision) {
                   if (item.type === 'coin') {
-                    setMoney(m => Math.min(100, m + item.value));
+                    const maxEarnings = getMaxEarnings(playerName);
+                    setMoney(m => Math.min(maxEarnings, m + item.value));
                   } else {
                     setMoney(m => Math.max(0, m - item.value));
                   }
@@ -315,7 +345,8 @@
           });
 
           setMoney(m => {
-            if (m >= 100 && gameState === 'playing') {
+            const maxEarnings = getMaxEarnings(playerName);
+            if (m >= maxEarnings && maxEarnings !== Infinity && gameState === 'playing') {
               setGameState('grinch');
             }
             return m;
@@ -680,7 +711,7 @@
               textAlign: 'center',
               padding: '0 20px'
             }}>
-              The Grinch stopped you from earning more... but $100 is the max anyway!
+              The Grinch stopped you from earning more... but ${getMaxEarnings(playerName)} is the max anyway!
             </p>
             
             <button
@@ -750,49 +781,107 @@
               <circle key={f.id} cx={f.x} cy={f.y} r={f.size} fill="white" opacity="0.8" />
             ))}
 
-            {/* Player Sleigh */}
-            <g transform={`translate(${PLAYER_X}, ${playerY})`}>
-              {/* Sleigh body */}
-              <ellipse cx="4" cy="7" rx="5" ry="1.8" fill="#8b0000" />
-              <ellipse cx="4" cy="7" rx="4" ry="1.2" fill="#c41e3a" />
-              <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
-              <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
-              
-              {/* Character body */}
-              <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
-              
-              {/* Character head - now an image */}
-              <clipPath id="playerHeadClip">
-                <circle cx="3.5" cy="3.5" r="2.5" />
-              </clipPath>
-              <image 
-                href={getHeadImage(money)}
-                x="0.5" 
-                y="0.5" 
-                width="6" 
-                height="6" 
-                clipPath="url(#playerHeadClip)"
-                preserveAspectRatio="xMidYMid slice"
-              />
-              
-              {/* Santa hat on top of head */}
-              <path d="M 1.5 2 Q 3.5 -1 6 2" fill="#c41e3a" />
-              <circle cx="6" cy="1.5" r="0.8" fill="white" />
-              <ellipse cx="3.5" cy="2.2" rx="2.2" ry="0.5" fill="white" />
-              
-              {/* Level name on sleigh - rendered last to be on top */}
-              <text 
-                x="4" 
-                y="7.5" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="1.4" 
-                fontWeight="bold"
-                fontFamily="Georgia, serif"
-              >
-                {getLevelInfo(money).name}
-              </text>
-            </g>
+            {/* Player Vehicle */}
+            {playerName === 'Khaleesi' ? (
+              /* Dragon for Khaleesi */
+              <g transform={`translate(${PLAYER_X}, ${playerY})`}>
+                {/* Dragon body */}
+                <ellipse cx="5" cy="6" rx="6" ry="3" fill="#1a1a1a" />
+                {/* Dragon tail */}
+                <path d="M -1 6 Q -4 4 -6 6 Q -5 5 -4 6 Q -5 7 -6 6" fill="#1a1a1a" />
+                <polygon points="-6,5 -8,4 -6,6" fill="#1a1a1a" />
+                {/* Dragon neck */}
+                <path d="M 10 5 Q 12 3 13 4" stroke="#1a1a1a" strokeWidth="2" fill="none" />
+                {/* Dragon head */}
+                <ellipse cx="14" cy="3.5" rx="2" ry="1.5" fill="#1a1a1a" />
+                {/* Dragon eye */}
+                <circle cx="14.8" cy="3" r="0.4" fill="#ff4500" />
+                {/* Dragon horns */}
+                <path d="M 13 2.5 L 12 1 M 14 2 L 13.5 0.5" stroke="#333" strokeWidth="0.4" fill="none" />
+                {/* Dragon nostrils - fire */}
+                <circle cx="15.8" cy="3.5" r="0.3" fill="#ff4500" />
+                {/* Dragon wings */}
+                <path d="M 3 4 Q 0 -2 5 0 Q 3 2 6 3" fill="#2a2a2a" />
+                <path d="M 5 4 Q 3 -1 8 1 Q 5 2 7 3" fill="#222" />
+                {/* Dragon legs */}
+                <path d="M 2 8 L 1 10 L 2 10 L 2.5 9" fill="#1a1a1a" />
+                <path d="M 7 8 L 7 10 L 8 10 L 8.5 9" fill="#1a1a1a" />
+                
+                {/* Khaleesi riding */}
+                <ellipse cx="5" cy="4" rx="1.5" ry="1.2" fill="#e0e0e0" />
+                
+                {/* Character head - image */}
+                <clipPath id="playerHeadClip">
+                  <circle cx="5" cy="2" r="2" />
+                </clipPath>
+                <image 
+                  href={getHeadImage(money, playerName)}
+                  x="2.5" 
+                  y="-0.5" 
+                  width="5" 
+                  height="5" 
+                  clipPath="url(#playerHeadClip)"
+                  preserveAspectRatio="xMidYMid slice"
+                />
+                
+                {/* Level name on dragon */}
+                <text 
+                  x="5" 
+                  y="7" 
+                  textAnchor="middle" 
+                  fill="white" 
+                  fontSize="1.4" 
+                  fontWeight="bold"
+                  fontFamily="Georgia, serif"
+                >
+                  {getLevelInfo(money).name}
+                </text>
+              </g>
+            ) : (
+              /* Sleigh for everyone else */
+              <g transform={`translate(${PLAYER_X}, ${playerY})`}>
+                {/* Sleigh body */}
+                <ellipse cx="4" cy="7" rx="5" ry="1.8" fill="#8b0000" />
+                <ellipse cx="4" cy="7" rx="4" ry="1.2" fill="#c41e3a" />
+                <path d="M 0 7 Q -0.5 4 1.5 3 L 2 6 Z" fill="#8b0000" />
+                <path d="M -0.5 9 Q 0 10 8 10 Q 9 9.5 8.5 9" stroke="#ffd700" strokeWidth="0.5" fill="none" />
+                
+                {/* Character body */}
+                <ellipse cx="3.5" cy="6" rx="2" ry="1.5" fill="#c41e3a" />
+                
+                {/* Character head - now an image */}
+                <clipPath id="playerHeadClip">
+                  <circle cx="3.5" cy="3.5" r="2.5" />
+                </clipPath>
+                <image 
+                  href={getHeadImage(money, playerName)}
+                  x="0.5" 
+                  y="0.5" 
+                  width="6" 
+                  height="6" 
+                  clipPath="url(#playerHeadClip)"
+                  preserveAspectRatio="xMidYMid slice"
+                />
+                
+                {/* Santa hat on top of head */}
+                <path d="M 1.5 2 Q 3.5 -1 6 2" fill="#c41e3a" />
+                <circle cx="6" cy="1.5" r="0.8" fill="white" />
+                <ellipse cx="3.5" cy="2.2" rx="2.2" ry="0.5" fill="white" />
+                
+                {/* Level name on sleigh - rendered last to be on top */}
+                <text 
+                  x="4" 
+                  y="7.5" 
+                  textAnchor="middle" 
+                  fill="white" 
+                  fontSize="1.4" 
+                  fontWeight="bold"
+                  fontFamily="Georgia, serif"
+                >
+                  {getLevelInfo(money).name}
+                </text>
+              </g>
+            )}
 
             {items.map(item => (
               <g key={item.id} transform={`translate(${item.x}, ${item.y})`}>
@@ -802,7 +891,7 @@
                     <circle cx="2.5" cy="3" r="1.8" fill="none" stroke="#fff" strokeWidth="0.15" opacity="0.5" />
                     <rect x="2" y="0" width="1" height="1.2" fill="#888" />
                     <circle cx="2.5" cy="0.6" r="0.6" fill="#888" stroke="#666" strokeWidth="0.15" />
-                    <text x="2.5" y="3.8" textAnchor="middle" fill="#8b4513" fontSize="2" fontWeight="bold">$</text>
+                    <text x="2.5" y="3.7" textAnchor="middle" fill="#8b4513" fontSize="2.2" fontWeight="bold">${item.value}</text>
                   </g>
                 ) : item.type === 'snowman' ? (
                   <g>
@@ -956,7 +1045,7 @@
             boxShadow: levelUpAnimation ? '0 0 40px 15px rgba(255, 215, 0, 0.8)' : 'none'
           }}>
             <div style={{ fontSize: levelUpAnimation ? 'clamp(18px, 4vw, 28px)' : 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
-              {levelUpAnimation ? 'New Player Unlocked:' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
+              {levelUpAnimation ? 'New Level Achieved:' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
             </div>
           </div>
 
