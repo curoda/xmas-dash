@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="screen-orientation" content="landscape">
   <meta name="theme-color" content="#1a1a3e">
-  <title>Christmas Coin Chase!</title>
+  <title>Christmas Dash!</title>
   <style>
     * {
       margin: 0;
@@ -458,16 +458,18 @@
               textAlign: 'center',
               padding: '0 10px'
             }}>
-              Christmas Coin Chase!
+              Christmas Dash!
             </h1>
             
             <p style={{ 
               color: '#90EE90', 
               fontSize: 'clamp(14px, 3vw, 18px)', 
               marginBottom: '3vh', 
-              zIndex: 1 
+              zIndex: 1,
+              textAlign: 'center',
+              padding: '0 10px'
             }}>
-              Collect coins to earn $100!
+              Collect coins to increase your Christmas cash!
             </p>
             
             <div style={{ 
@@ -476,52 +478,62 @@
               borderRadius: '15px',
               boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
               zIndex: 1,
-              width: '80%',
-              maxWidth: '350px'
+              width: '90%',
+              maxWidth: '400px'
             }}>
               <label style={{ 
                 display: 'block', 
-                marginBottom: '10px', 
+                marginBottom: '15px', 
                 color: '#2d5a27', 
                 fontWeight: 'bold',
-                fontSize: 'clamp(14px, 2.5vw, 16px)'
+                fontSize: 'clamp(14px, 2.5vw, 18px)',
+                textAlign: 'center'
               }}>
-                Enter Your Name:
+                Choose Your Name:
               </label>
-              <input
-                type="text"
+              <select
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && startGame()}
                 style={{
-                  padding: 'clamp(10px, 2vw, 15px)',
-                  fontSize: 'clamp(16px, 3vw, 20px)',
+                  padding: 'clamp(12px, 2vw, 18px)',
+                  fontSize: 'clamp(16px, 3vw, 22px)',
                   borderRadius: '8px',
                   border: '3px solid #c41e3a',
-                  marginBottom: '15px',
+                  marginBottom: '20px',
                   width: '100%',
                   boxSizing: 'border-box',
-                  outline: 'none'
+                  outline: 'none',
+                  background: 'white',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23c41e3a\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 12px center',
+                  backgroundSize: '20px'
                 }}
-                placeholder="Your name here..."
-                autoFocus
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="words"
-              />
+              >
+                <option value="">-- Select your name --</option>
+                {['Henry', 'Maggie', 'Kooper', 'Finley', 'Grace', 'Ben', 'Bobby', 'Olivia', 'Chase', 'Lebron', 'T-Swift', 'Khaleesi'].map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
               <button
                 onClick={startGame}
+                disabled={!playerName}
                 style={{
                   padding: 'clamp(12px, 2.5vw, 18px) clamp(30px, 5vw, 50px)',
                   fontSize: 'clamp(18px, 3vw, 24px)',
-                  background: 'linear-gradient(to bottom, #c41e3a, #8b0000)',
+                  background: playerName 
+                    ? 'linear-gradient(to bottom, #c41e3a, #8b0000)' 
+                    : 'linear-gradient(to bottom, #999, #777)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
-                  cursor: 'pointer',
+                  cursor: playerName ? 'pointer' : 'not-allowed',
                   fontWeight: 'bold',
-                  boxShadow: '0 4px 0 #5c0000',
-                  width: '100%'
+                  boxShadow: playerName ? '0 4px 0 #5c0000' : '0 4px 0 #555',
+                  width: '100%',
+                  opacity: playerName ? 1 : 0.7
                 }}
               >
                 Start Game!
@@ -944,7 +956,7 @@
             boxShadow: levelUpAnimation ? '0 0 40px 15px rgba(255, 215, 0, 0.8)' : 'none'
           }}>
             <div style={{ fontSize: levelUpAnimation ? 'clamp(18px, 4vw, 28px)' : 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
-              {levelUpAnimation ? 'LEVEL UP!' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
+              {levelUpAnimation ? 'New Level Achieved:' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
             </div>
           </div>
 
