@@ -375,8 +375,11 @@
         return () => clearInterval(grinchLoop);
       }, [gameState]);
 
-      // Detect level changes and trigger animation only for level UP
+      // Detect level changes and trigger animation only for level UP (not for special characters)
       useEffect(() => {
+        // Special characters don't have level changes
+        if (['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) return;
+        
         const newLevel = Math.min(Math.floor(money / 10) + 1, 10);
         if (newLevel > currentLevel && money > 0) {
           setCurrentLevel(newLevel);
@@ -386,7 +389,7 @@
           // Level went down, update without animation
           setCurrentLevel(newLevel);
         }
-      }, [money, currentLevel]);
+      }, [money, currentLevel, playerName]);
 
       const startGame = () => {
         if (playerName.trim()) {
@@ -834,7 +837,7 @@
                   fontWeight="bold"
                   fontFamily="Georgia, serif"
                 >
-                  {getLevelInfo(money).name}
+                  Khaleesi
                 </text>
               </g>
             ) : (
@@ -878,7 +881,7 @@
                   fontWeight="bold"
                   fontFamily="Georgia, serif"
                 >
-                  {getLevelInfo(money).name}
+                  {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) ? playerName : getLevelInfo(money).name}
                 </text>
               </g>
             )}
@@ -1033,19 +1036,25 @@
             position: 'absolute',
             top: '2%',
             right: '2%',
-            background: levelUpAnimation ? 'rgba(255, 215, 0, 0.9)' : 'rgba(0,0,0,0.7)',
+            background: (levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) ? 'rgba(255, 215, 0, 0.9)' : 'rgba(0,0,0,0.7)',
             padding: 'clamp(5px, 1.5vw, 12px) clamp(15px, 2.5vw, 25px)',
             borderRadius: '10px',
-            color: levelUpAnimation ? '#000' : 'white',
+            color: (levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) ? '#000' : 'white',
             fontFamily: 'Georgia, serif',
             zIndex: 25,
             textAlign: 'center',
             transformOrigin: 'top right',
-            animation: levelUpAnimation ? 'levelUp 0.5s ease-out forwards' : 'none',
-            boxShadow: levelUpAnimation ? '0 0 40px 15px rgba(255, 215, 0, 0.8)' : 'none'
+            animation: (levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) ? 'levelUp 0.5s ease-out forwards' : 'none',
+            boxShadow: (levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) ? '0 0 40px 15px rgba(255, 215, 0, 0.8)' : 'none'
           }}>
             <div style={{ fontSize: levelUpAnimation ? 'clamp(18px, 4vw, 28px)' : 'clamp(14px, 3vw, 22px)', fontWeight: 'bold' }}>
-              {levelUpAnimation ? 'New Level Achieved:' : `Level ${getLevelInfo(money).level}:`} <span style={{ color: levelUpAnimation ? '#8b0000' : '#ffd700' }}>{getLevelInfo(money).name}</span>
+              {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) 
+                ? <span style={{ color: '#ffd700' }}>{playerName}</span>
+                : (levelUpAnimation 
+                    ? <>New Level Achieved: <span style={{ color: '#8b0000' }}>{getLevelInfo(money).name}</span></>
+                    : <>Level {getLevelInfo(money).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money).name}</span></>
+                  )
+              }
             </div>
           </div>
 
