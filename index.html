@@ -1236,6 +1236,18 @@
                         preserveAspectRatio="xMidYMid meet"
                       />
                     </g>
+                  ) : playerName === 'T-Swift' ? (
+                    <g>
+                      {/* Kanye image for T-Swift */}
+                      <image 
+                        href="kanye.png"
+                        x="-1" 
+                        y="-2" 
+                        width="10" 
+                        height="14" 
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                    </g>
                   ) : (
                     <g>
                       {/* Snowman - anchored to ground */}
@@ -1418,7 +1430,7 @@
               {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) 
                 ? <span style={{ color: '#ffd700' }}>{playerName}</span>
                 : (levelUpAnimation 
-                    ? <>New Player Unlocked!: <span style={{ color: '#8b0000' }}>{getLevelInfo(money).name}</span></>
+                    ? <>New Level Achieved: <span style={{ color: '#8b0000' }}>{getLevelInfo(money).name}</span></>
                     : <>Level {getLevelInfo(money).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money).name}</span></>
                   )
               }
