@@ -128,6 +128,7 @@
       const [presentSpeed, setPresentSpeed] = useState(1);
       const [bossDefeated, setBossDefeated] = useState(false);
       const [bossCountdown, setBossCountdown] = useState(3);
+      const [isPaused, setIsPaused] = useState(false);
       const gameLoopRef = useRef(null);
       const keysPressed = useRef({});
       const containerRef = useRef(null);
@@ -300,6 +301,8 @@
         if (gameState !== 'playing' && gameState !== 'grinch') return;
 
         const gameLoop = setInterval(() => {
+          if (isPaused) return;
+          
           const moveSpeed = 1.2;
           
           if (keysPressed.current['ArrowUp'] || keysPressed.current['w'] || touchDirection === 'up') {
@@ -369,7 +372,7 @@
 
         gameLoopRef.current = gameLoop;
         return () => clearInterval(gameLoop);
-      }, [gameState, playerY, touchDirection, spawnItem]);
+      }, [gameState, playerY, touchDirection, spawnItem, isPaused]);
 
       // Boss battle game loop
       useEffect(() => {
@@ -378,6 +381,8 @@
         let canSpawnPresent = true;
 
         const bossLoop = setInterval(() => {
+          if (isPaused) return;
+          
           // Player movement during boss battle
           const moveSpeed = 1.5;
           if (keysPressed.current['ArrowUp'] || keysPressed.current['w'] || touchDirection === 'up') {
@@ -495,7 +500,7 @@
         }, 1000 / 60);
 
         return () => clearInterval(bossLoop);
-      }, [gameState, playerY, touchDirection, presentSpeed, presentsDodged]);
+      }, [gameState, playerY, touchDirection, presentSpeed, presentsDodged, isPaused]);
 
       // Boss intro countdown
       useEffect(() => {
@@ -558,6 +563,7 @@
         setGrinchX(100);
         setCurrentLevel(1);
         setLevelUpAnimation(false);
+        setIsPaused(false);
       };
 
       const handleTouchStart = (direction) => {
@@ -1194,8 +1200,6 @@
                         height="6" 
                         preserveAspectRatio="xMidYMid meet"
                       />
-                      {/* Value text */}
-                      <text x="3" y="4" textAnchor="middle" fill="#fff" fontSize="2" fontWeight="bold" stroke="#333" strokeWidth="0.3">${item.value}</text>
                     </g>
                   ) : (
                     <g>
@@ -1239,26 +1243,40 @@
                     </g>
                   )
                 ) : (
-                  <g>
-                    {/* Reindeer - flying in air, facing left */}
-                    {/* Body */}
-                    <ellipse cx="6" cy="4" rx="4" ry="2.5" fill="#8B4513" />
-                    {/* Head */}
-                    <ellipse cx="1.5" cy="3" rx="1.8" ry="1.5" fill="#8B4513" />
-                    {/* Antlers */}
-                    <path d="M 2 1.5 L 2.5 -0.5 L 3.5 0 M 2.5 -0.5 L 3 -1.5" stroke="#5D3A1A" strokeWidth="0.4" fill="none" />
-                    <path d="M 1 1.5 L 0.5 -0.5 L -0.5 0 M 0.5 -0.5 L 0 -1.5" stroke="#5D3A1A" strokeWidth="0.4" fill="none" />
-                    {/* Red nose */}
-                    <circle cx="-0.2" cy="3" r="0.6" fill="#ff0000" />
-                    {/* Eye */}
-                    <circle cx="1.2" cy="2.5" r="0.35" fill="#000" />
-                    {/* Legs */}
-                    <line x1="4" y1="6" x2="4" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
-                    <line x1="6" y1="6" x2="6" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
-                    <line x1="8" y1="6" x2="8.5" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
-                    {/* Tail */}
-                    <ellipse cx="10" cy="4" rx="0.8" ry="0.5" fill="#5D3A1A" />
-                  </g>
+                  playerName === 'Lebron' ? (
+                    <g>
+                      {/* Ref image for Lebron */}
+                      <image 
+                        href="ref.png"
+                        x="-1" 
+                        y="-2" 
+                        width="12" 
+                        height="12" 
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                    </g>
+                  ) : (
+                    <g>
+                      {/* Reindeer - flying in air, facing left */}
+                      {/* Body */}
+                      <ellipse cx="6" cy="4" rx="4" ry="2.5" fill="#8B4513" />
+                      {/* Head */}
+                      <ellipse cx="1.5" cy="3" rx="1.8" ry="1.5" fill="#8B4513" />
+                      {/* Antlers */}
+                      <path d="M 2 1.5 L 2.5 -0.5 L 3.5 0 M 2.5 -0.5 L 3 -1.5" stroke="#5D3A1A" strokeWidth="0.4" fill="none" />
+                      <path d="M 1 1.5 L 0.5 -0.5 L -0.5 0 M 0.5 -0.5 L 0 -1.5" stroke="#5D3A1A" strokeWidth="0.4" fill="none" />
+                      {/* Red nose */}
+                      <circle cx="-0.2" cy="3" r="0.6" fill="#ff0000" />
+                      {/* Eye */}
+                      <circle cx="1.2" cy="2.5" r="0.35" fill="#000" />
+                      {/* Legs */}
+                      <line x1="4" y1="6" x2="4" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
+                      <line x1="6" y1="6" x2="6" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
+                      <line x1="8" y1="6" x2="8.5" y2="8" stroke="#5D3A1A" strokeWidth="0.5" />
+                      {/* Tail */}
+                      <ellipse cx="10" cy="4" rx="0.8" ry="0.5" fill="#5D3A1A" />
+                    </g>
+                  )
                 )}
               </g>
             ))}
@@ -1394,6 +1412,97 @@
               }
             </div>
           </div>
+
+          {/* Pause button - top middle */}
+          {!isPaused && (
+            <button
+              onClick={() => setIsPaused(true)}
+              style={{
+                position: 'absolute',
+                top: '2%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.5)',
+                color: 'rgba(255,255,255,0.8)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                padding: 'clamp(5px, 1vw, 10px) clamp(15px, 2.5vw, 25px)',
+                fontSize: 'clamp(12px, 2.5vw, 16px)',
+                cursor: 'pointer',
+                zIndex: 20,
+                fontFamily: 'Georgia, serif'
+              }}
+            >
+              Pause
+            </button>
+          )}
+
+          {/* Pause overlay */}
+          {isPaused && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0,0,0,0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100
+            }}>
+              <h2 style={{
+                color: '#ffd700',
+                fontSize: 'clamp(24px, 5vw, 40px)',
+                fontFamily: 'Georgia, serif',
+                marginBottom: '4vh',
+                textShadow: '2px 2px 4px #000'
+              }}>
+                Game Paused
+              </h2>
+              
+              <button
+                onClick={() => setIsPaused(false)}
+                style={{
+                  padding: 'clamp(12px, 2.5vw, 18px) clamp(40px, 6vw, 60px)',
+                  fontSize: 'clamp(16px, 3vw, 22px)',
+                  background: 'linear-gradient(to bottom, #4a7c23, #2d5a27)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontFamily: 'Georgia, serif',
+                  boxShadow: '0 4px 0 #1a472a',
+                  marginBottom: '2vh'
+                }}
+              >
+                Continue
+              </button>
+              
+              <button
+                onClick={() => {
+                  setIsPaused(false);
+                  resetGame();
+                }}
+                style={{
+                  padding: 'clamp(10px, 2vw, 15px) clamp(30px, 5vw, 50px)',
+                  fontSize: 'clamp(14px, 2.5vw, 18px)',
+                  background: 'linear-gradient(to bottom, #c41e3a, #8b0000)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontFamily: 'Georgia, serif',
+                  boxShadow: '0 4px 0 #5c0000'
+                }}
+              >
+                Restart Game
+              </button>
+            </div>
+          )}
 
           {gameState === 'boss' && (
             <>
