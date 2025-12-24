@@ -91,6 +91,25 @@
       return HEAD_IMAGES[index];
     };
 
+    // Get player's preview image for start screen
+    const getPlayerPreviewImage = (name) => {
+      const previewImages = {
+        'Henry': '2 - henry-game.png',
+        'Maggie': '3 - maggie-game.png',
+        'Kooper': '4 - Kooper-game.png',
+        'Finley': '5 - fin-game.png',
+        'Grace': '6 - grace-game.png',
+        'Ben': '7 - ben-game.png',
+        'Bobby': '8 - bobby-game.png',
+        'Olivia': '9 - olivia-game.png',
+        'Chase': '10 - chase-game.png',
+        'Lebron': 'lebron.png',
+        'T-Swift': 't-swift.png',
+        'Khaleesi': 'khaleesi.png'
+      };
+      return previewImages[name] || null;
+    };
+
     const getLevelInfo = (money) => {
       const index = Math.min(Math.floor(money / 10), 9);
       return { level: index + 1, name: LEVEL_NAMES[index] };
@@ -768,6 +787,42 @@
             }}>
               Tap left side to go UP, right side to go DOWN
             </p>
+            
+            {/* Player preview when name is selected */}
+            {playerName && (
+              <div style={{
+                position: 'absolute',
+                bottom: '5%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                zIndex: 1
+              }}>
+                <img 
+                  src={getPlayerPreviewImage(playerName)}
+                  alt={playerName}
+                  style={{
+                    width: 'clamp(60px, 15vw, 100px)',
+                    height: 'clamp(60px, 15vw, 100px)',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #ffd700',
+                    boxShadow: '0 0 15px rgba(255, 215, 0, 0.5)'
+                  }}
+                />
+                <p style={{
+                  color: '#ffd700',
+                  fontSize: 'clamp(16px, 3vw, 24px)',
+                  fontWeight: 'bold',
+                  marginTop: '10px',
+                  textShadow: '2px 2px 4px #000'
+                }}>
+                  Hi {playerName}!
+                </p>
+              </div>
+            )}
           </div>
         );
       }
