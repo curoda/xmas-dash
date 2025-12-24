@@ -1185,16 +1185,17 @@
                 {item.type === 'coin' ? (
                   playerName === 'Lebron' ? (
                     <g>
-                      {/* Basketball for Lebron */}
-                      <circle cx="2.5" cy="3" r="2.5" fill="#e87a22" />
-                      {/* Basketball seam lines */}
-                      <line x1="2.5" y1="0.5" x2="2.5" y2="5.5" stroke="#333" strokeWidth="0.15" />
-                      <line x1="0" y1="3" x2="5" y2="3" stroke="#333" strokeWidth="0.15" />
-                      {/* Curved seams */}
-                      <path d="M 1.2 0.8 Q 0.3 3 1.2 5.2" stroke="#333" strokeWidth="0.15" fill="none" />
-                      <path d="M 3.8 0.8 Q 4.7 3 3.8 5.2" stroke="#333" strokeWidth="0.15" fill="none" />
+                      {/* Basketball image for Lebron */}
+                      <image 
+                        href="bball.png"
+                        x="0" 
+                        y="0" 
+                        width="6" 
+                        height="6" 
+                        preserveAspectRatio="xMidYMid meet"
+                      />
                       {/* Value text */}
-                      <text x="2.5" y="3.5" textAnchor="middle" fill="#fff" fontSize="1.8" fontWeight="bold" stroke="#333" strokeWidth="0.2">${item.value}</text>
+                      <text x="3" y="4" textAnchor="middle" fill="#fff" fontSize="2" fontWeight="bold" stroke="#333" strokeWidth="0.3">${item.value}</text>
                     </g>
                   ) : (
                     <g>
@@ -1207,22 +1208,36 @@
                     </g>
                   )
                 ) : item.type === 'snowman' ? (
-                  <g>
-                    {/* Snowman - anchored to ground */}
-                    <circle cx="3" cy="8" r="3" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
-                    <circle cx="3" cy="3" r="2.2" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
-                    <circle cx="2.2" cy="2.5" r="0.35" fill="#000" />
-                    <circle cx="3.8" cy="2.5" r="0.35" fill="#000" />
-                    <polygon points="3,3.2 3,4 4.2,3.6" fill="#ff6600" />
-                    <circle cx="3" cy="6.5" r="0.35" fill="#333" />
-                    <circle cx="3" cy="8" r="0.35" fill="#333" />
-                    <circle cx="3" cy="9.5" r="0.35" fill="#333" />
-                    <line x1="-0.5" y1="6" x2="2" y2="5" stroke="#8b4513" strokeWidth="0.5" />
-                    <line x1="6.5" y1="6" x2="4" y2="5" stroke="#8b4513" strokeWidth="0.5" />
-                    {/* Top hat */}
-                    <rect x="1.5" y="-0.5" width="3" height="0.6" fill="#222" />
-                    <rect x="2" y="-2.5" width="2" height="2" fill="#222" />
-                  </g>
+                  playerName === 'Lebron' ? (
+                    <g>
+                      {/* Dillon image for Lebron */}
+                      <image 
+                        href="dillon.png"
+                        x="-1" 
+                        y="-2" 
+                        width="10" 
+                        height="14" 
+                        preserveAspectRatio="xMidYMid meet"
+                      />
+                    </g>
+                  ) : (
+                    <g>
+                      {/* Snowman - anchored to ground */}
+                      <circle cx="3" cy="8" r="3" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
+                      <circle cx="3" cy="3" r="2.2" fill="#fff" stroke="#ddd" strokeWidth="0.15" />
+                      <circle cx="2.2" cy="2.5" r="0.35" fill="#000" />
+                      <circle cx="3.8" cy="2.5" r="0.35" fill="#000" />
+                      <polygon points="3,3.2 3,4 4.2,3.6" fill="#ff6600" />
+                      <circle cx="3" cy="6.5" r="0.35" fill="#333" />
+                      <circle cx="3" cy="8" r="0.35" fill="#333" />
+                      <circle cx="3" cy="9.5" r="0.35" fill="#333" />
+                      <line x1="-0.5" y1="6" x2="2" y2="5" stroke="#8b4513" strokeWidth="0.5" />
+                      <line x1="6.5" y1="6" x2="4" y2="5" stroke="#8b4513" strokeWidth="0.5" />
+                      {/* Top hat */}
+                      <rect x="1.5" y="-0.5" width="3" height="0.6" fill="#222" />
+                      <rect x="2" y="-2.5" width="2" height="2" fill="#222" />
+                    </g>
+                  )
                 ) : (
                   <g>
                     {/* Reindeer - flying in air, facing left */}
