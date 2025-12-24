@@ -37,6 +37,21 @@
       70% { transform: scale(1.3); }
       100% { transform: scale(1.3); background: rgba(255, 215, 0, 0.9); }
     }
+    @keyframes headGlow {
+      0% { opacity: 0; r: 3; }
+      20% { opacity: 1; r: 5; }
+      40% { opacity: 0.8; r: 4; }
+      60% { opacity: 1; r: 5.5; }
+      80% { opacity: 0.8; r: 4.5; }
+      100% { opacity: 1; r: 5; }
+    }
+    @keyframes headBounce {
+      0% { transform: scale(1); }
+      25% { transform: scale(1.3); }
+      50% { transform: scale(1.1); }
+      75% { transform: scale(1.25); }
+      100% { transform: scale(1.15); }
+    }
     @keyframes rotatePhone {
       0%, 100% { transform: rotate(0deg); }
       25% { transform: rotate(-15deg); }
@@ -86,8 +101,9 @@
       if (name === 'T-Swift') return 't-swift.png';
       if (name === 'Khaleesi') return 'khaleesi.png';
       
-      // Regular characters change based on level
-      const index = Math.min(Math.floor(money / 10), 9);
+      // Chase and Olivia level up every $25, others every $10
+      const increment = (name === 'Chase' || name === 'Olivia') ? 25 : 10;
+      const index = Math.min(Math.floor(money / increment), 9);
       return HEAD_IMAGES[index];
     };
 
@@ -110,8 +126,9 @@
       return previewImages[name] || null;
     };
 
-    const getLevelInfo = (money) => {
-      const index = Math.min(Math.floor(money / 10), 9);
+    const getLevelInfo = (money, name) => {
+      const increment = (name === 'Chase' || name === 'Olivia') ? 25 : 10;
+      const index = Math.min(Math.floor(money / increment), 9);
       return { level: index + 1, name: LEVEL_NAMES[index] };
     };
 
@@ -551,7 +568,9 @@
         // Special characters don't have level changes
         if (['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) return;
         
-        const newLevel = Math.min(Math.floor(money / 10) + 1, 10);
+        // Chase and Olivia level up every $25, others every $10
+        const increment = (playerName === 'Chase' || playerName === 'Olivia') ? 25 : 10;
+        const newLevel = Math.min(Math.floor(money / increment) + 1, 10);
         if (newLevel > currentLevel && money > 0) {
           setCurrentLevel(newLevel);
           setLevelUpAnimation(true);
@@ -1211,15 +1230,35 @@
                 <clipPath id="playerHeadClip">
                   <circle cx="3.5" cy="3.5" r="2.5" />
                 </clipPath>
-                <image 
-                  href={getHeadImage(money, playerName)}
-                  x="0.5" 
-                  y="0.5" 
-                  width="6" 
-                  height="6" 
-                  clipPath="url(#playerHeadClip)"
-                  preserveAspectRatio="xMidYMid slice"
-                />
+                
+                {/* Glow effect when leveling up */}
+                {levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) && (
+                  <>
+                    <circle cx="3.5" cy="3.5" r="4" fill="none" stroke="#ffd700" strokeWidth="1" opacity="0.8">
+                      <animate attributeName="r" values="3;5;3" dur="0.5s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="1;0.3;1" dur="0.5s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="3.5" cy="3.5" r="5" fill="none" stroke="#fff" strokeWidth="0.5" opacity="0.6">
+                      <animate attributeName="r" values="4;6;4" dur="0.5s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.6;0.2;0.6" dur="0.5s" repeatCount="indefinite" />
+                    </circle>
+                  </>
+                )}
+                
+                <g style={{ 
+                  transformOrigin: '3.5px 3.5px',
+                  animation: (levelUpAnimation && !['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName)) ? 'headBounce 0.5s ease-out 3' : 'none'
+                }}>
+                  <image 
+                    href={getHeadImage(money, playerName)}
+                    x="0.5" 
+                    y="0.5" 
+                    width="6" 
+                    height="6" 
+                    clipPath="url(#playerHeadClip)"
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </g>
                 
                 {/* Santa hat on top of head */}
                 <path d="M 1.5 2 Q 3.5 -1 6 2" fill="#c41e3a" />
@@ -1236,7 +1275,7 @@
                   fontWeight="bold"
                   fontFamily="Georgia, serif"
                 >
-                  {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) ? playerName : getLevelInfo(money).name}
+                  {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) ? playerName : getLevelInfo(money, playerName).name}
                 </text>
               </g>
             )}
@@ -1497,8 +1536,8 @@
               {['Lebron', 'T-Swift', 'Khaleesi'].includes(playerName) 
                 ? <span style={{ color: '#ffd700' }}>{playerName}</span>
                 : (levelUpAnimation 
-                    ? <>New Player Unlocked: <span style={{ color: '#8b0000' }}>{getLevelInfo(money).name}</span></>
-                    : <>Level {getLevelInfo(money).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money).name}</span></>
+                    ? <>New Player Unlocked: <span style={{ color: '#8b0000' }}>{getLevelInfo(money, playerName).name}</span></>
+                    : <>Level {getLevelInfo(money, playerName).level}: <span style={{ color: '#ffd700' }}>{getLevelInfo(money, playerName).name}</span></>
                   )
               }
             </div>
