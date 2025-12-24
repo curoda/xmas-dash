@@ -1334,9 +1334,9 @@
                 style={{
                   position: 'absolute',
                   left: 0,
-                  top: 0,
+                  top: '12%',
                   width: '50%',
-                  height: '100%',
+                  height: '88%',
                   background: touchDirection === 'up' ? 'rgba(255,255,255,0.1)' : 'transparent',
                   zIndex: 10,
                   display: 'flex',
@@ -1362,9 +1362,9 @@
                 style={{
                   position: 'absolute',
                   right: 0,
-                  top: 0,
+                  top: '12%',
                   width: '50%',
-                  height: '100%',
+                  height: '88%',
                   background: touchDirection === 'down' ? 'rgba(255,255,255,0.1)' : 'transparent',
                   zIndex: 10,
                   display: 'flex',
@@ -1429,6 +1429,11 @@
           {!isPaused && (
             <button
               onClick={() => setIsPaused(true)}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsPaused(true);
+              }}
               style={{
                 position: 'absolute',
                 top: '2%',
@@ -1441,8 +1446,9 @@
                 padding: 'clamp(5px, 1vw, 10px) clamp(15px, 2.5vw, 25px)',
                 fontSize: 'clamp(12px, 2.5vw, 16px)',
                 cursor: 'pointer',
-                zIndex: 20,
-                fontFamily: 'Georgia, serif'
+                zIndex: 50,
+                fontFamily: 'Georgia, serif',
+                touchAction: 'manipulation'
               }}
             >
               Pause
@@ -1476,6 +1482,10 @@
               
               <button
                 onClick={() => setIsPaused(false)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  setIsPaused(false);
+                }}
                 style={{
                   padding: 'clamp(12px, 2.5vw, 18px) clamp(40px, 6vw, 60px)',
                   fontSize: 'clamp(16px, 3vw, 22px)',
@@ -1487,7 +1497,8 @@
                   fontWeight: 'bold',
                   fontFamily: 'Georgia, serif',
                   boxShadow: '0 4px 0 #1a472a',
-                  marginBottom: '2vh'
+                  marginBottom: '2vh',
+                  touchAction: 'manipulation'
                 }}
               >
                 Continue
@@ -1495,6 +1506,11 @@
               
               <button
                 onClick={() => {
+                  setIsPaused(false);
+                  resetGame();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
                   setIsPaused(false);
                   resetGame();
                 }}
@@ -1508,7 +1524,8 @@
                   cursor: 'pointer',
                   fontWeight: 'bold',
                   fontFamily: 'Georgia, serif',
-                  boxShadow: '0 4px 0 #5c0000'
+                  boxShadow: '0 4px 0 #5c0000',
+                  touchAction: 'manipulation'
                 }}
               >
                 Restart Game
