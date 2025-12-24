@@ -8,6 +8,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="screen-orientation" content="landscape">
   <meta name="theme-color" content="#1a1a3e">
+  <link rel="apple-touch-icon" href="app icon.png">
+  <link rel="icon" type="image/png" href="app icon.png">
   <title>Christmas Dash!</title>
   <style>
     * {
@@ -125,6 +127,7 @@
       const [bossPresents, setBossPresents] = useState([]);
       const [presentSpeed, setPresentSpeed] = useState(1);
       const [bossDefeated, setBossDefeated] = useState(false);
+      const [bossCountdown, setBossCountdown] = useState(3);
       const gameLoopRef = useRef(null);
       const keysPressed = useRef({});
       const containerRef = useRef(null);
@@ -255,6 +258,11 @@
           if (['ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
             e.preventDefault();
           }
+          // Testing shortcut: 'b' key triggers boss battle
+          if (e.key === 'b' && gameState === 'playing') {
+            setGameState('bossIntro');
+            setItems([]);
+          }
         };
         const handleKeyUp = (e) => {
           keysPressed.current[e.key] = false;
@@ -267,7 +275,7 @@
           window.removeEventListener('keydown', handleKeyDown);
           window.removeEventListener('keyup', handleKeyUp);
         };
-      }, []);
+      }, [gameState]);
 
       useEffect(() => {
         const container = containerRef.current;
@@ -351,11 +359,7 @@
           setMoney(m => {
             const maxEarnings = getMaxEarnings(playerName);
             if (m >= maxEarnings && maxEarnings !== Infinity && gameState === 'playing') {
-              setGameState('boss');
-              setPresentsDodged(0);
-              setPresentSpeed(1);
-              setBossPresents([]);
-              setBossDefeated(false);
+              setGameState('bossIntro');
               setItems([]); // Clear regular items
             }
             return m;
@@ -400,39 +404,47 @@
             if (prev.length === 0 && canSpawnPresent && presentsDodged < 20) {
               canSpawnPresent = false;
               setTimeout(() => { canSpawnPresent = true; }, 300); // Small delay between presents
+              
+              // Calculate trajectory toward player's CURRENT position (locked in)
+              const startX = 75;
+              const startY = 40;
+              const targetY = playerY + 6; // Aim for center of player
+              const dx = PLAYER_X - startX;
+              const dy = targetY - startY;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const velocityX = (dx / distance);
+              const velocityY = (dy / distance);
+              
               return [{
                 id: Date.now(),
-                x: 90,
-                y: 40, // Start from middle, will track player
-                targetY: playerY,
+                x: startX,
+                y: startY,
+                velocityX: velocityX,
+                velocityY: velocityY,
                 rotation: 0
               }];
             }
             return prev;
           });
 
-          // Move presents toward player and check collisions
+          // Move presents along their fixed trajectory and check collisions
           setBossPresents(prev => {
             const playerBox = { x: PLAYER_X, y: playerY, width: 10, height: 12 };
             let hitPlayer = false;
             let dodgedThisFrame = 0;
 
+            const speed = 0.8 + presentSpeed * 0.3;
+            
             const remaining = prev
-              .map(p => {
-                // Calculate direction toward player
-                const dy = playerY - p.y;
-                const ySpeed = Math.sign(dy) * Math.min(Math.abs(dy) * 0.05, 0.8);
-                
-                return { 
-                  ...p, 
-                  x: p.x - (0.8 + presentSpeed * 0.3),
-                  y: p.y + ySpeed,
-                  rotation: p.rotation + 5
-                };
-              })
+              .map(p => ({ 
+                ...p, 
+                x: p.x + p.velocityX * speed,
+                y: p.y + p.velocityY * speed,
+                rotation: p.rotation + 5
+              }))
               .filter(p => {
                 // Check collision with player
-                const presentBox = { x: p.x, y: p.y, width: 5, height: 5 };
+                const presentBox = { x: p.x, y: p.y, width: 7, height: 7 };
                 const collision = 
                   playerBox.x < presentBox.x + presentBox.width &&
                   playerBox.x + playerBox.width > presentBox.x &&
@@ -444,8 +456,8 @@
                   return false;
                 }
 
-                // Check if dodged (went off screen)
-                if (p.x < -5) {
+                // Check if dodged (went off screen - any edge)
+                if (p.x < -7 || p.x > 105 || p.y < -7 || p.y > 105) {
                   dodgedThisFrame++;
                   return false;
                 }
@@ -484,6 +496,31 @@
 
         return () => clearInterval(bossLoop);
       }, [gameState, playerY, touchDirection, presentSpeed, presentsDodged]);
+
+      // Boss intro countdown
+      useEffect(() => {
+        if (gameState !== 'bossIntro') return;
+        
+        setBossCountdown(3);
+        
+        const countdownInterval = setInterval(() => {
+          setBossCountdown(c => {
+            if (c <= 1) {
+              clearInterval(countdownInterval);
+              // Transition to boss battle
+              setGameState('boss');
+              setPresentsDodged(0);
+              setPresentSpeed(1);
+              setBossPresents([]);
+              setBossDefeated(false);
+              return 0;
+            }
+            return c - 1;
+          });
+        }, 1000);
+        
+        return () => clearInterval(countdownInterval);
+      }, [gameState]);
 
       // Detect level changes and trigger animation only for level UP (not for special characters)
       useEffect(() => {
@@ -592,6 +629,38 @@
                 <circle key={f.id} cx={f.x} cy={f.y} r={f.size} fill="white" opacity="0.8" />
               ))}
             </svg>
+            
+            {/* Home screen tip alert */}
+            <div style={{
+              position: 'absolute',
+              top: '2%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(255, 215, 0, 0.95)',
+              padding: 'clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 20px)',
+              borderRadius: '10px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              zIndex: 10,
+              width: '90%',
+              maxWidth: '450px',
+              textAlign: 'center',
+              border: '2px solid #daa520'
+            }}>
+              <div style={{ 
+                color: '#8b4513', 
+                fontSize: 'clamp(11px, 2vw, 14px)',
+                fontWeight: 'bold',
+                marginBottom: '4px'
+              }}>
+                For the best experience:
+              </div>
+              <div style={{ 
+                color: '#5d3a1a', 
+                fontSize: 'clamp(10px, 1.8vw, 13px)'
+              }}>
+                Tap <strong>Share</strong>, then <strong>"Add to Home Screen"</strong>, and launch from the app icon!
+              </div>
+            </div>
             
             <h1 style={{ 
               color: '#ff6b6b', 
@@ -785,6 +854,105 @@
         );
       }
 
+      // Boss intro / warning screen
+      if (gameState === 'bossIntro') {
+        return (
+          <div ref={containerRef} style={{
+            ...containerStyle,
+            background: 'linear-gradient(to bottom, #1a0a0a, #3d0a0a, #1a0a0a)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'Georgia, serif',
+            animation: 'bossFlash 0.5s ease-in-out infinite alternate'
+          }}>
+            <style>{`
+              @keyframes bossFlash {
+                from { background: linear-gradient(to bottom, #1a0a0a, #3d0a0a, #1a0a0a); }
+                to { background: linear-gradient(to bottom, #2a0a0a, #5d1a1a, #2a0a0a); }
+              }
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+              }
+              @keyframes pulse-grow {
+                from { transform: scale(1); }
+                to { transform: scale(1.1); }
+              }
+            `}</style>
+            
+            <div style={{
+              fontSize: 'clamp(14px, 3vw, 20px)',
+              color: '#ff4444',
+              marginBottom: '2vh',
+              letterSpacing: '8px',
+              textTransform: 'uppercase'
+            }}>
+              Warning
+            </div>
+            
+            <h1 style={{ 
+              color: '#ff0000', 
+              fontSize: 'clamp(28px, 7vw, 56px)', 
+              textShadow: '0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000',
+              marginBottom: '2vh',
+              textAlign: 'center',
+              animation: 'shake 0.3s ease-in-out infinite',
+              padding: '0 10px'
+            }}>
+              FINAL BOSS
+            </h1>
+            
+            <div style={{ 
+              fontSize: 'clamp(60px, 15vw, 120px)', 
+              marginBottom: '2vh'
+            }}>
+              👹
+            </div>
+            
+            <h2 style={{
+              color: '#4a7c23',
+              fontSize: 'clamp(20px, 5vw, 36px)',
+              textShadow: '2px 2px 4px #000',
+              marginBottom: '3vh',
+              textAlign: 'center'
+            }}>
+              THE GRINCH APPROACHES!
+            </h2>
+            
+            <p style={{ 
+              color: '#ffcc00', 
+              fontSize: 'clamp(14px, 3vw, 20px)', 
+              marginBottom: '2vh',
+              textAlign: 'center',
+              padding: '0 20px'
+            }}>
+              Dodge 20 presents to defeat him!
+            </p>
+            
+            <div style={{
+              fontSize: 'clamp(48px, 12vw, 96px)',
+              color: '#fff',
+              fontWeight: 'bold',
+              textShadow: '0 0 30px #fff',
+              animation: 'pulse-grow 0.5s ease-in-out infinite alternate'
+            }}>
+              {bossCountdown}
+            </div>
+            
+            <p style={{ 
+              color: '#aaa', 
+              fontSize: 'clamp(12px, 2vw, 16px)', 
+              marginTop: '2vh'
+            }}>
+              Get ready...
+            </p>
+          </div>
+        );
+      }
+
       if (gameState === 'won') {
         return (
           <div ref={containerRef} style={{
@@ -830,6 +998,17 @@
                 ? 'You dodged all 20 presents and defeated the Grinch! You are a Christmas Champion!'
                 : `The Grinch got you with a present... but you still earned $${money}!`
               }
+            </p>
+            
+            <p style={{ 
+              color: '#ffd700', 
+              fontSize: 'clamp(16px, 3.5vw, 24px)', 
+              marginBottom: '3vh',
+              textAlign: 'center',
+              fontStyle: 'italic',
+              textShadow: '1px 1px 2px #000'
+            }}>
+              Merry Christmas from Curt and Eve!
             </p>
             
             <button
